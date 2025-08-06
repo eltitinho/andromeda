@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate PDF</title>
+    <style>
+        .required-field::after {
+            content: " *";
+            color: red;
+        }
+        input:required, textarea:required {
+            border: 2px solid red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Cotización</h1>
+    <form action="/generate_pdf" method="post">
+        <label for="empresa">Empresa cliente:</label>
+        <input type="text" id="empresa" name="empresa" required><br><br>
+
+        <label for="cliente">Nombre del cliente:</label>
+        <input type="text" id="cliente" name="cliente" required><br><br>
+
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" required><br><br>
+
+        <label for="localizacion_cliente">Localización cliente:</label>
+        <input type="text" id="localizacion_cliente" name="localizacion_cliente" required><br><br>
+        
+        <label for="fecha">Fecha:</label>
+        <input type="date" id="fecha" name="fecha" required><br><br>
+
+        <label for="vigencia">Vigencia:</label>
+        <input type="date" id="vigencia" name="vigencia" required><br><br>
+
+        <label for="comment_title">Título del comentario:</label>
+        <input type="text" id="comment_title" name="comment_title" required><br>
+        <div id="notas">
+            <label for="notas">Notas:</label><br>
+        </div>
+        <button type="button" onclick="addNota()">Agregar nota</button>
+        <button type="button" onclick="removeNota()">Remover nota</button><br><br>
+
+        <div id="localizacion_flete">
+            <div class="localizacion_flete">
+                <label for="localizacion_flete">Localización del Flete:</label><br>
+                <input type="text" id="ciudad_flete" name="ciudad_flete" placeholder="Ciudad">
+                <input type="text" id="estado_flete" name="estado_flete" placeholder="Estado">
+                <input type="number" id="cp_flete" name="cp_flete" placeholder="CP">
+                <input type="text" id="pais_flete" name="pais_flete" placeholder="País">
+            </div>
+        </div><br>
+
+        <div id="destino">
+            <div class="destino">
+                <label for="destino">Destino:</label><br>
+                <input type="text" id="direccion_destino" name="direccion_destino" placeholder="Dirección">
+                <input type="text" id="ciudad_destino" name="ciudad_destino" placeholder="Ciudad">
+                <input type="text" id="estado_destino" name="estado_destino" placeholder="Estado">
+                <input type="number" id="cp_destino" name="cp_destino" placeholder="CP">
+                <input type="text" id="pais_destino" name="pais_destino" placeholder="País">
+            </div>
+        </div><br>
+
+        <label for="general_comment">Comentarios generales:</label><br>
+        <textarea id="general_comment" name="general_comment" rows="3" cols="40"></textarea><br><br>
+
+        <label for="moneda">Moneda:</label>
+        <select name="moneda" id="moneda">
+            <option value="USD">USD</option>
+            <option value="MXN">MXN</option>
+            <option value="EUR">EUR</option>
+        </select><br><br>
+
+        <div id="articulos">
+            <div class="articulo">
+                <label for="articulo1">Artículo 1:</label>
+                <input type="text" id="articulo1" name="articulos[]" required>
+                <label for="precio1">Precio:</label>
+                <input type="number" step="0.01" min="0.01" id="precio1" name="precios[]" required>
+                <label for="iva1">IVA:</label>
+                <input type="checkbox" id="iva1" name="ivas[]" value="1"><br>
+                <label for="observacion1">Observaciones:</label><br>
+                <textarea id="observacion1" name="observaciones[]" rows="3" cols="40"></textarea><br><br>
+            </div>
+        </div>
+
+        <button type="button" onclick="addArticulo()">Agregar artículo</button>
+        <button type="button" onclick="removeArticulo()">Remover artículo</button><br><br>
+
+        <label for="assurance">Seguro de carga:</label>
+        <input type="number" id="assurance" name="assurance" required>
+        <label for="assurance">%</label><br><br>
+
+        <label for="transit_time">Tiempo de tránsito:</label>
+        <input type="number" id="transit_time" name="transit_time" required>
+        <label for="transit_time">días</label><br><br>
+
+        <input type="submit" value="Generar">
+    </form>
+
+    <script>
+        let articuloCount = 1;
+        let notaCount = 1;
+
+        function addArticulo() {
+            articuloCount++;
+            const div = document.createElement('div');
+            div.classList.add('articulo');
+            div.innerHTML = `
+                <label for="articulo${articuloCount}">Artículo ${articuloCount}:</label>
+                <input type="text" id="articulo${articuloCount}" name="articulos[]" required>
+                <label for="precio${articuloCount}">Precio:</label>
+                <input type="number" step="0.01" min="0.01" id="precio${articuloCount}" name="precios[]" required>
+                <label for="iva${articuloCount}">IVA:</label>
+                <input type="checkbox" id="iva${articuloCount}" name="ivas[]" value="${articuloCount}"><br>
+                <label for="observacion${articuloCount}">Observaciones:</label><br>
+                <textarea id="observacion${articuloCount}" name="observaciones[]" rows="3" cols="40"></textarea><br><br>
+            `;
+            document.getElementById('articulos').appendChild(div);
+        }
+
+        function removeArticulo() {
+            if (articuloCount > 0) {
+                const articulosDiv = document.getElementById('articulos');
+                articulosDiv.removeChild(articulosDiv.lastChild);
+                articuloCount--;
+            }
+        }
+
+        function addNota() {
+            notaCount++;
+            const div = document.createElement('div');
+            div.classList.add('nota');
+            div.innerHTML = `
+                <input type="text" id="nota${notaCount}" name="notas[]">
+                `;
+            document.getElementById('notas').appendChild(div);
+        }
+
+        function removeNota() {
+            if (notaCount > 0) {
+                const notasDiv = document.getElementById('notas');
+                notasDiv.removeChild(notasDiv.lastChild);
+                notaCount--;
+            }
+        }
+    </script>
+</body>
+</html>
