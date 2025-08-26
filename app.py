@@ -21,7 +21,3 @@ application = DispatcherMiddleware(
 
 if __name__ == '__main__':
     run_simple('localhost', 5000, application)
-
-if __name__ == '__main__':
-    from werkzeug.serving import run_simple
-    run_simple('localhost', 5000, combined_app)

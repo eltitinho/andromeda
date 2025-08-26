@@ -8,11 +8,26 @@
 </head>
 <body>
     <h1>Rastreo del flete</h1>
-    <ul id="lista_de_rastreo">
+    {% if status %}
+        <p>Número de rastreo: {{ status['tracking_number'] }}</p>
+    {% else %}
+        <p>El número de reastreo no existe</p>
+    {% endif %}
+    <ul id="tacking_levels">
         <li>Creado</li>
-        <li class="checked">Recolectado</li>
+        <li>Recolectado</li>
         <li>En tránsito</li>
         <li>Entregado</li>
     </ul>
+    <script>
+        const checkedIndex = {{ status['status'] }}; // The index of the item to be checked
+        const listItems = document.querySelectorAll('#tacking_levels li');
+      
+        listItems.forEach((item, index) => {
+          if (index <= checkedIndex) {
+            item.classList.add('checked');
+          }
+        });
+      </script>
 </body>
 </html>
