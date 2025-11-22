@@ -4,18 +4,17 @@ from werkzeug.serving import run_simple
 from invoicing import invoicing
 from tracking import tracking
 
-main_app = Flask(__name__)
+app = Flask(__name__)
 
-@main_app.route('/')
-def index():
+@app.route('/')
+def home():
     return render_template('index.html')
 
-# Combine both apps to serve on the same port
 application = DispatcherMiddleware(
-    main_app
-    , {
-        '/invoicing': invoicing
-        , '/tracking': tracking
+    app,
+    {
+        '/invoicing': invoicing,
+        '/tracking': tracking
     }
 )
 

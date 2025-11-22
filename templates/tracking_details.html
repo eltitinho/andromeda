@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/tracking.css') }}">
+    <title>Tracking Details</title>
+</head>
+<body>
+    <h1>Detalles del Rastreo</h1>
+    <div id="trackingInfo">
+        <p>Número de rastreo: {{ status['tracking_number'] }}</p>
+    </div>
+    <ul id="tracking_levels"></ul>
+    <script src="{{ url_for('static', filename='js/statusMap.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const trackingLevels = document.getElementById('tracking_levels');
+            const checkedIndex = {{ status['status'] }};
+            trackingLevels.innerHTML = '';
+            Object.entries(statusMap).forEach(([key, value]) => {
+                const li = document.createElement('li');
+                li.setAttribute('data-status', key);
+                li.textContent = value;
+                if (key <= checkedIndex) {
+                    li.classList.add('checked');
+                }
+                trackingLevels.appendChild(li);
+            });
+        });
+    </script>
+</body>
+</html>

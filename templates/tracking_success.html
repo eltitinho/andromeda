@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tracking Success</title>
+    <style>
+        .status-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .status-table th, .status-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .status-table th {
+            background-color: #f2f2f2;
+        }
+        .status-completed {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-pending {
+            background-color: #f8f9fa;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tracking Number Found</h1>
+    <p>Tracking number {{ tracking_number }} was found in the database.</p>
+
+    <table class="status-table">
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody id="status-table-body">
+            <!-- Status information will be inserted here by JavaScript -->
+        </tbody>
+    </table>
+
+    <script src="{{ url_for('static', filename='js/statusMap.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const statusTableBody = document.getElementById('status-table-body');
+            const currentStatus = {{ status }}; // Assuming status is passed from the backend
+
+            // Clear any existing content
+            statusTableBody.innerHTML = '';
+
+            // Add rows for each status
+            Object.entries(statusMap).forEach(([key, value]) => {
+                const row = document.createElement('tr');
+                const statusCell = document.createElement('td');
+                const descriptionCell = document.createElement('td');
+
+                statusCell.textContent = value;
+                descriptionCell.textContent = value;
+
+                if (key <= currentStatus) {
+                    row.classList.add('status-completed');
+                } else {
+                    row.classList.add('status-pending');
+                }
+
+                row.appendChild(statusCell);
+                row.appendChild(descriptionCell);
+                statusTableBody.appendChild(row);
+            });
+        });
+    </script>
+</body>
+</html>
