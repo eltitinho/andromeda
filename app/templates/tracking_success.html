@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tracking Success</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Futura:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Futura', sans-serif;
+        }
+
+        h1 {
+            text-align: center;
+            font-family: 'Futura', sans-serif;
+            font-weight: 700;
+        }
+
+        .tracking-number {
+            text-align: center;
+            font-family: 'Futura', sans-serif;
+            font-weight: 400;
+            margin-bottom: 20px;
+        }
+
+        .timeline-container {
+            margin-top: 50px;
+        }
+
+        .timeline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            margin-top: 20px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: #ddd;
+            z-index: 1;
+        }
+
+        .status-item {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            flex: 1;
+        }
+
+        .status-item::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #ddd;
+            z-index: 3;
+        }
+
+        .status-item.completed::before {
+            background-color: #28a745;
+        }
+
+        .status-item.completed .status-text {
+            color: #28a745;
+        }
+
+        .status-text {
+            margin-bottom: 30px;
+            color: #6c757d;
+            position: relative;
+            top: -10px;
+            font-family: 'Futura', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="tracking-number">Número de rastreo: {{ tracking_number }}</h1>
+
+    <div class="timeline-container">
+        <div class="timeline" id="status-timeline">
+            <!-- Status items will be inserted here by JavaScript -->
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/statusMap.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const statusTimeline = document.getElementById('status-timeline');
+            const currentStatus = {{ status }}; // Assuming status is passed from the backend
+
+            // Clear any existing content
+            statusTimeline.innerHTML = '';
+
+            // Add items for each status
+            Object.entries(statusMap).forEach(([key, value]) => {
+                const statusItem = document.createElement('div');
+                statusItem.classList.add('status-item');
+
+                if (key <= currentStatus) {
+                    statusItem.classList.add('completed');
+                }
+
+                const statusText = document.createElement('div');
+                statusText.classList.add('status-text');
+                statusText.textContent = value;
+
+                statusItem.appendChild(statusText);
+                statusTimeline.appendChild(statusItem);
+            });
+        });
+    </script>
+</body>
+</html>

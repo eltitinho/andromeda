@@ -1,22 +1,18 @@
-from flask import Flask, render_template
-from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from werkzeug.serving import run_simple
-from invoicing import invoicing
-from tracking import tracking
+from flask_login import LoginManager
+from app import create_app
+from app.models import User
 
-app = Flask(__name__)
+app = create_app()
 
-@app.route('/')
-def home():
-    return render_template('index.html')
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
 
-application = DispatcherMiddleware(
-    app,
-    {
-        '/invoicing': invoicing,
-        '/tracking': tracking
-    }
-)
+@login_manager.user_loader
+def load_user(user_id):
+    return User.get(user_id)
 
 if __name__ == '__main__':
-    run_simple('localhost', 5000, application)
+    run_simple('localhost', 5000, app)
+

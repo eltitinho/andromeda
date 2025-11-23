@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iniciar Sesión</title>
+    <title>Rastrea tu pedido</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Roboto', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -14,18 +15,19 @@
             margin: 0;
             background-color: #f4f4f4;
         }
-        .login-container {
+        .tracking-container {
             background: #fff;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             width: 300px;
         }
-        .login-container h2 {
+        .tracking-container h1 {
             margin-bottom: 20px;
             text-align: center;
+            font-weight: 500;
         }
-        .login-container input {
+        .tracking-container input[type="text"] {
             width: 100%;
             padding: 10px;
             margin-bottom: 10px;
@@ -33,7 +35,7 @@
             border-radius: 4px;
             box-sizing: border-box;
         }
-        .login-container button {
+        .tracking-container input[type="submit"] {
             width: 100%;
             padding: 10px;
             background-color: #007BFF;
@@ -43,29 +45,18 @@
             font-size: 16px;
             cursor: pointer;
         }
-        .login-container button:hover {
+        .tracking-container input[type="submit"]:hover {
             background-color: #0056b3;
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <h2>Iniciar Sesión</h2>
-        <form id="loginForm">
-            <input type="password" id="password" placeholder="Contraseña" required>
-            <button type="submit">Iniciar Sesión</button>
+    <div class="tracking-container">
+        <h1>Rastrea tu pedido</h1>
+        <form method="POST" action="/tracking/tracking_view">
+            <input type="text" name="tracking_number" placeholder="Numero de rastreo" required>
+            <input type="submit" value="Track">
         </form>
     </div>
-    <script>
-        document.getElementById('loginForm').addEventListener('submit', function(event) {
-            event.preventDefault();
-            const password = document.getElementById('password').value;
-            if (password === 'trinca') {
-                window.location.href = '/tracking/tracking_management';
-            } else {
-                alert('Contraseña incorrecta');
-            }
-        });
-    </script>
 </body>
 </html>

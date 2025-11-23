@@ -1,2 +1,4 @@
 ressources/
 wsgi.py
+__pycache__/
+.venv/
