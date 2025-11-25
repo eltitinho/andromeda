@@ -1,5 +1,6 @@
-from flask import render_template, request, redirect, url_for, session
-from app.decorators import login_required
+# app/blueprints/tracking.py
+from flask import request, render_template, redirect, url_for, Blueprint
+from flask_login import current_user
 import sqlite3
 
 def get_db_connection():
@@ -17,11 +18,11 @@ def tracking_view():
         conn.close()
         if tracking_data:
             # Pass both tracking_number and status to the template
-            return render_template('tracking_success.html',
+            return render_template('tracking/success.html',
                                 tracking_number=tracking_number,
                                 status=tracking_data['status'])
         else:
-            return render_template('tracking_error.html')
+            return render_template('tracking/error.html')
     # Handle GET request with tracking_number parameter
     tracking_number = request.args.get('tracking_number')
     if tracking_number:
@@ -32,12 +33,12 @@ def tracking_view():
         conn.close()
         if tracking_data:
             # Pass both tracking_number and status to the template
-            return render_template('tracking_success.html',
+            return render_template('tracking/success.html',
                                 tracking_number=tracking_number,
                                 status=tracking_data['status'])
         else:
-            return render_template('tracking_error.html')
-    return render_template('tracking_view.html')
+            return render_template('tracking/error.html')
+    return render_template('tracking/view.html')
 
 def tracking_management():
     conn = sqlite3.connect('tracking.db')
@@ -48,4 +49,37 @@ def tracking_management():
 
     conn.close()
 
-    return render_template('tracking_management.html', tracking_data=tracking_data)
+    return render_template('tracking/management.html', tracking_data=tracking_data)
+
+# Create a blueprint for public tracking features
+public_tracking_bp = Blueprint('public_tracking', __name__)
+
+@public_tracking_bp.route('/view', methods=['GET', 'POST'])
+def public_tracking_view():
+    return tracking_view()
+
+# Create a blueprint for private tracking features
+tracking_bp = Blueprint('tracking', __name__)
+
+@tracking_bp.before_request
+def before_tracking_request():
+    if not current_user.is_authenticated:
+        return redirect(url_for('public.login', next=request.url))
+
+@tracking_bp.route('/management')
+def tracking_management_route():
+    return tracking_management()
+
+@tracking_bp.route('/details')
+def tracking_details():
+    return render_template('tracking/details.html')
+
+@tracking_bp.route('/error')
+def tracking_error():
+    return render_template('tracking/error.html')
+
+@tracking_bp.route('/success')
+def tracking_success():
+    return render_template('tracking/success.html')
+
+

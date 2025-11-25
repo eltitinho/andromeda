@@ -55,11 +55,11 @@
 <body>
     <div class="container">
         <h1>Bienvenido</h1>
-        <button onclick="window.location.href='/tracking/tracking_view'">Ver Rastreo</button>
+        <button onclick="window.location.href='/public_tracking/view'">Ver Rastreo</button>
         <button onclick="window.location.href='/login'">Conectarse</button>
         {% if current_user.is_authenticated and current_user.is_admin %}
         <div class="admin-section">
-            <button onclick="window.location.href='tracking/tracking_management'">Gestión de Rastreo</button>
+            <button onclick="window.location.href='/tracking/management'">Gestión de Rastreo</button>
             <button onclick="window.location.href='/invoicing'">Facturación</button>
         </div>
         {% endif %}
