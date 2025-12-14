@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tracking Management</title>
+    <title>Gestión de Seguimiento</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -46,31 +46,227 @@
             text-align: center;
             margin-top: 20px;
         }
+        .delete-btn {
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .delete-btn:hover {
+            background-color: #cc0000;
+        }
+        .status-select {
+            padding: 5px;
+            border-radius: 3px;
+            border: 1px solid #ddd;
+        }
+        .update-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        .update-btn:hover {
+            background-color: #45a049;
+        }
+        .create-form {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .create-form input, .create-form select {
+            padding: 8px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        .create-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .create-btn:hover {
+            background-color: #0b7dda;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Tracking Management</h1>
+        <h1>Gestión de Seguimiento</h1>
         {% if tracking_data %}
         <table id="trackingTable">
             <thead>
                 <tr>
-                    <th>Tracking Number</th>
-                    <th>Status</th>
+                    <th>Número de Seguimiento</th>
+                    <th>Estado</th>
+                    <th>Acción</th>
                 </tr>
             </thead>
             <tbody>
                 {% for data in tracking_data %}
                 <tr>
                     <td>{{ data[0] }}</td>
-                    <td>{{ data[1] }}</td>
+                    <td id="status-cell-{{ data[0] }}">
+                        <!-- Status select and update button will be inserted here by JavaScript -->
+                    </td>
+                    <td>
+                        <button class="delete-btn" onclick="deleteTracking('{{ data[0] }}')">Eliminar</button>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
         {% else %}
-        <p class="error-message">No tracking data available. Please check your database connection or query.</p>
+        <p class="error-message">No hay datos de seguimiento disponibles. Por favor, verifique la conexión a la base de datos o la consulta.</p>
         {% endif %}
+
+        <div class="create-form">
+            <h2>Crear Nuevo Seguimiento</h2>
+            <form id="createTrackingForm">
+                <input type="text" id="newTrackingNumber" placeholder="Número de Seguimiento" required>
+                <select id="newStatus" class="status-select" required>
+                    <!-- Status options will be inserted here by JavaScript -->
+                </select>
+                <button type="submit" class="create-btn">Crear</button>
+            </form>
+        </div>
     </div>
+
+    <script src="{{ url_for('static', filename='js/statusMap.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Populate the status select dropdowns
+            const trackingData = [
+                {% for data in tracking_data %}
+                { trackingNumber: '{{ data[0] }}', status: '{{ data[1] }}' }{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ];
+
+            trackingData.forEach(item => {
+                const statusCell = document.getElementById(`status-cell-${item.trackingNumber}`);
+
+                // Create the status select element
+                const statusSelect = document.createElement('select');
+                statusSelect.id = `status-${item.trackingNumber}`;
+                statusSelect.classList.add('status-select');
+
+                // Add options from statusMap
+                Object.entries(statusMap).forEach(([key, value]) => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = value;
+                    if (key === item.status) {
+                        option.selected = true;
+                    }
+                    statusSelect.appendChild(option);
+                });
+
+                // Create the update button
+                const updateButton = document.createElement('button');
+                updateButton.classList.add('update-btn');
+                updateButton.textContent = 'Actualizar';
+                updateButton.onclick = function() {
+                    updateStatus(item.trackingNumber);
+                };
+
+                // Append the select and button to the status cell
+                statusCell.appendChild(statusSelect);
+                statusCell.appendChild(updateButton);
+            });
+
+            // Populate the new status select dropdown
+            const newStatusSelect = document.getElementById('newStatus');
+            Object.entries(statusMap).forEach(([key, value]) => {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = value;
+                newStatusSelect.appendChild(option);
+            });
+
+            // Handle form submission
+            document.getElementById('createTrackingForm').addEventListener('submit', function(event) {
+                event.preventDefault();
+                createTrackingNumber();
+            });
+        });
+
+        function deleteTracking(trackingNumber) {
+            if (confirm('¿Está seguro de que desea eliminar este número de seguimiento?')) {
+                fetch('/tracking/delete/' + trackingNumber, {
+                    method: 'DELETE'
+                })
+                .then(response => {
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        alert('No se pudo eliminar el número de seguimiento');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Ocurrió un error al eliminar el número de seguimiento');
+                });
+            }
+        }
+
+        function updateStatus(trackingNumber) {
+            const statusSelect = document.getElementById(`status-${trackingNumber}`);
+            const newStatus = statusSelect.value;
+
+            fetch('/tracking/update_status/' + trackingNumber, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: newStatus })
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert('Estado actualizado correctamente');
+                    location.reload();
+                } else {
+                    alert('No se pudo actualizar el estado');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ocurrió un error al actualizar el estado');
+            });
+        }
+
+        function createTrackingNumber() {
+            const trackingNumber = document.getElementById('newTrackingNumber').value;
+            const status = document.getElementById('newStatus').value;
+
+            fetch('/tracking/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ tracking_number: trackingNumber, status: status })
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert('Número de seguimiento creado correctamente');
+                    location.reload();
+                } else {
+                    alert('No se pudo crear el número de seguimiento');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ocurrió un error al crear el número de seguimiento');
+            });
+        }
+    </script>
 </body>
 </html>

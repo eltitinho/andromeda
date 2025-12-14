@@ -1,5 +1,5 @@
 # app/blueprints/tracking.py
-from flask import request, render_template, redirect, url_for, Blueprint
+from flask import request, render_template, redirect, url_for, Blueprint, jsonify
 from flask_login import current_user
 import sqlite3
 
@@ -51,6 +51,30 @@ def tracking_management():
 
     return render_template('tracking/management.html', tracking_data=tracking_data)
 
+def delete_tracking(tracking_number):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM tracking WHERE tracking_number = ?', (tracking_number,))
+    conn.commit()
+    conn.close()
+    return jsonify({'status': 'success'}), 200
+
+def update_tracking_status(tracking_number, new_status):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE tracking SET status = ? WHERE tracking_number = ?', (new_status, tracking_number))
+    conn.commit()
+    conn.close()
+    return jsonify({'status': 'success'}), 200
+
+def create_tracking_number(tracking_number, status):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('INSERT INTO tracking (tracking_number, status) VALUES (?, ?)', (tracking_number, status))
+    conn.commit()
+    conn.close()
+    return jsonify({'status': 'success'}), 201
+
 # Create a blueprint for public tracking features
 public_tracking_bp = Blueprint('public_tracking', __name__)
 
@@ -82,4 +106,19 @@ def tracking_error():
 def tracking_success():
     return render_template('tracking/success.html')
 
+@tracking_bp.route('/delete/<tracking_number>', methods=['DELETE'])
+def delete_tracking_route(tracking_number):
+    return delete_tracking(tracking_number)
 
+@tracking_bp.route('/update_status/<tracking_number>', methods=['POST'])
+def update_status_route(tracking_number):
+    data = request.get_json()
+    new_status = data.get('status')
+    return update_tracking_status(tracking_number, new_status)
+
+@tracking_bp.route('/create', methods=['POST'])
+def create_tracking_route():
+    data = request.get_json()
+    tracking_number = data.get('tracking_number')
+    status = data.get('status')
+    return create_tracking_number(tracking_number, status)
