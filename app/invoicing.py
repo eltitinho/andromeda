@@ -5,6 +5,7 @@ from PyPDF2 import PdfWriter, PdfReader
 import io
 from PIL import Image
 from datetime import datetime
+import os
 
 # Utility functions
 def draw_long_string(c: canvas.Canvas, start_x: int, start_y: int, s: str, max_width: int):
@@ -85,7 +86,7 @@ def generate_pdf(request):
     observaciones = request.form.getlist('observaciones[]')
     assurance = request.form['assurance']
     transit_time = request.form['transit_time']
-    background_pdf_path = "../ressources/BFA_background.pdf"
+    background_pdf_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../ressources/BFA_background.pdf'))
 
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=letter)
@@ -170,3 +171,4 @@ def generate_pdf(request):
     writer.write(output_buffer)
     output_buffer.seek(0)
     return send_file(output_buffer, as_attachment=True, download_name='information.pdf', mimetype='application/pdf')
+
