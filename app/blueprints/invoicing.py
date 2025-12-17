@@ -1,6 +1,7 @@
 from flask import request, render_template, redirect, url_for, Blueprint
 from flask_login import current_user
 from app.invoicing import generate_pdf
+import time
 
 invoicing_bp = Blueprint('invoicing', __name__)
 
