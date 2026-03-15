@@ -24,7 +24,7 @@ def create_app():
         SESSION_COOKIE_SAMESITE='Lax',
         PERMANENT_SESSION_LIFETIME=timedelta(days=1),
         SESSION_COOKIE_PATH='/',
-        SESSION_COOKIE_DOMAIN='68.183.137.189',
+        #SESSION_COOKIE_DOMAIN='68.183.137.189',
     )
 
     login_manager.init_app(app)

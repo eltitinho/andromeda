@@ -3,3 +3,4 @@ wsgi.py
 __pycache__/
 .venv/
 tracking.db
+.ai_private/

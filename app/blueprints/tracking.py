@@ -41,7 +41,7 @@ def tracking_view():
     return render_template('tracking/view.html')
 
 def tracking_management():
-    conn = sqlite3.connect('tracking.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute('SELECT * FROM tracking')
