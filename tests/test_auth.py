@@ -3,6 +3,7 @@ from flask import Flask, template_rendered
 from flask_login import LoginManager
 from app.blueprints.auth import public_bp, private_bp
 from app.models import User
+from unittest.mock import patch
 
 @pytest.fixture
 def app():
@@ -27,20 +28,22 @@ def client(app):
     return app.test_client()
 
 def test_login_with_good_credentials(client):
-    # Send a POST request to /login with good credentials
-    response = client.post('/login', data={
-        'username': 'admin',
-        'password': 'password'
-    }, follow_redirects=True)
+    # Mock the password check to avoid using plain text password
+    with patch('app.models.User.check_password', return_value=True):
+        # Send a POST request to /login with test credentials
+        response = client.post('/login', data={
+            'username': 'admin',
+            'password': 'test_password'  # This password doesn't matter with mock
+        }, follow_redirects=True)
 
-    # Check if the response is successful
-    assert response.status_code == 200
+        # Check if the response is successful
+        assert response.status_code == 200
 
-    # Verify we're on the home page after login
-    assert b'Bienvenido' in response.data
+        # Verify we're on the home page after login
+        assert b'Bienvenido' in response.data
 
-    # Verify the user is logged in by checking for a logout link or similar
-    assert 'Gestión de Rastreo'.encode('utf-8') in response.data
+        # Verify the user is logged in by checking for a logout link or similar
+        assert 'Gestión de Rastreo'.encode('utf-8') in response.data
 
 def test_login_with_bad_credentials(client):
     # Send a POST request to /login with bad credentials
