@@ -1,11 +1,14 @@
-from flask import request, render_template, send_file, session
+from flask import request, render_template, send_file, session, current_app
+from flask_mail import Message
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from PyPDF2 import PdfWriter, PdfReader
+from app.utils.encryption import decrypt_data
 import io
 from PIL import Image
 from datetime import datetime
 import os
+import sqlite3
 
 # Utility functions
 def draw_long_string(c: canvas.Canvas, start_x: int, start_y: int, s: str, max_width: int):
@@ -170,5 +173,130 @@ def generate_pdf(request):
         writer.add_page(new_pdf.pages[i])
     writer.write(output_buffer)
     output_buffer.seek(0)
+    
+    # Check if email should be sent
+    send_email = request.form.get('send_email')
+    if send_email:
+        # Use our new function to send email with proper configuration
+        if send_email_with_current_config():
+            print("Test email sent successfully")
+        else:
+            print("Test email sending failed")
+        # Continue with PDF download even if email fails
+    
     return send_file(output_buffer, as_attachment=True, download_name='information.pdf', mimetype='application/pdf')
+    
+def get_email_credentials():
+    """Retrieve email credentials and SMTP settings from user database"""
+    try:
+        conn = sqlite3.connect('user.db')
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # Create table if it doesn't exist
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS email_settings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email_address TEXT NOT NULL,
+                email_password_encrypted TEXT NOT NULL,
+                smtp_server TEXT NOT NULL,
+                smtp_port INTEGER NOT NULL,
+                smtp_use_tls BOOLEAN NOT NULL,
+                smtp_use_ssl BOOLEAN NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        print("Email settings table ensured to exist")
+        
+        cursor.execute('''
+            SELECT email_address, email_password_encrypted, 
+                   smtp_server, smtp_port, smtp_use_tls, smtp_use_ssl
+            FROM email_settings ORDER BY id DESC LIMIT 1
+        ''')
+        result = cursor.fetchone()
+        conn.close()
+        
+        if result:
+            # Decrypt the password for use with SMTP
+            email_password = decrypt_data(result['email_password_encrypted'])
+            print(f"Found email credentials in database: {result['email_address']}")
+            print(f"SMTP Server: {result['smtp_server']}:{result['smtp_port']}")
+            return {
+                'email_address': result['email_address'],
+                'email_password': email_password,
+                'smtp_server': result['smtp_server'],
+                'smtp_port': result['smtp_port'],
+                'smtp_use_tls': bool(result['smtp_use_tls']),
+                'smtp_use_ssl': bool(result['smtp_use_ssl'])
+            }
+        else:
+            print("No email credentials found in database (table exists but empty)")
+            
+        return result if result else None
+    except Exception as e:
+        print(f"Error retrieving email credentials: {e}")
+        return None
 
+def update_mail_config():
+    """Update Flask-Mail configuration with database credentials"""
+    from flask import current_app
+    
+    credentials = get_email_credentials()
+    if not credentials:
+        print("No email credentials found")
+        return False
+
+    # Update Flask config with database credentials
+    current_app.config.update({
+        'MAIL_SERVER': credentials['smtp_server'],
+        'MAIL_PORT': credentials['smtp_port'],
+        'MAIL_USE_TLS': credentials['smtp_use_tls'],
+        'MAIL_USE_SSL': credentials['smtp_use_ssl'],
+        'MAIL_USERNAME': credentials['email_address'],
+        'MAIL_PASSWORD': credentials['email_password']
+    })
+
+    # Initialize Mail if not already done
+    if hasattr(current_app, 'init_mail'):
+        mail_instance = current_app.init_mail()
+        print(f"Flask-Mail initialized: {mail_instance}")
+        return True
+    else:
+        print("init_mail function not available")
+        return False
+
+def send_email_with_current_config():
+    """Send email using the current database credentials"""
+    from flask import current_app
+    from flask_mail import Message
+    
+    # Ensure Mail is properly initialized with current credentials
+    if not update_mail_config():
+        print("Cannot send email - no valid credentials")
+        return False
+    
+    try:
+        # Get the Mail instance
+        mail = current_app.extensions.get('mail')
+        if not mail:
+            print("Flask-Mail not initialized")
+            return False
+        
+        credentials = get_email_credentials()
+        if not credentials:
+            return False
+        
+        with current_app.app_context():
+            msg = Message("Test Email from Andromeda",
+                         sender=credentials['email_address'],
+                         recipients=["kris_generic@tuta.com"])
+            msg.body = "This is a test email sent with proper Flask-Mail configuration"
+            mail.send(msg)
+            print("Email sent successfully!")
+            return True
+            
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
