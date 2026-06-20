@@ -176,15 +176,20 @@ def generate_pdf(request):
     
     # Check if email should be sent
     send_email = request.form.get('send_email')
-    if send_email:
-        # Use our new function to send email with proper configuration
-        if send_email_with_current_config():
-            print("Test email sent successfully")
+    client_email = request.form.get('email')
+    
+    if send_email and client_email:
+        # Send email with PDF attachment to client
+        output_buffer.seek(0)  # Rewind buffer for email attachment
+        if send_quote_email(client_email, output_buffer, request.form):
+            print(f"Quote email sent successfully to {client_email}")
+            output_buffer.seek(0)  # Rewind again for download
         else:
-            print("Test email sending failed")
+            print(f"Failed to send quote email to {client_email}")
+            output_buffer.seek(0)  # Rewind for download
         # Continue with PDF download even if email fails
     
-    return send_file(output_buffer, as_attachment=True, download_name='information.pdf', mimetype='application/pdf')
+    return send_file(output_buffer, as_attachment=True, download_name='cotizacion.pdf', mimetype='application/pdf')
     
 def get_email_credentials():
     """Retrieve email credentials and SMTP settings from user database"""
@@ -297,6 +302,68 @@ def send_email_with_current_config():
             
     except Exception as e:
         print(f"Failed to send email: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+def send_quote_email(client_email, pdf_buffer, form_data):
+    """Send quote email with PDF attachment to client"""
+    from flask import current_app
+    from flask_mail import Message
+    
+    # Ensure Mail is properly initialized with current credentials
+    if not update_mail_config():
+        print("Cannot send email - no valid credentials")
+        return False
+    
+    try:
+        # Get the Mail instance
+        mail = current_app.extensions.get('mail')
+        if not mail:
+            print("Flask-Mail not initialized")
+            return False
+        
+        credentials = get_email_credentials()
+        if not credentials:
+            print("No email credentials found")
+            return False
+        
+        # Get client name from form data
+        cliente = form_data.get('cliente', 'Cliente')
+        
+        with current_app.app_context():
+            msg = Message(
+                subject="Cotización adjunta",
+                sender=credentials['email_address'],
+                recipients=[client_email]
+            )
+            
+            # Spanish email body
+            msg.body = f"""Estimado/a {cliente},
+
+Adjunto encontrará la cotización solicitada.
+
+Por favor revise el documento y, si todo está correcto, responda a este correo para confirmar su aceptación.
+
+Gracias,
+Andromeda"""
+            
+            # Attach PDF
+            pdf_buffer.seek(0)
+            msg.attach(
+                filename='cotizacion.pdf',
+                content_type='application/pdf',
+                data=pdf_buffer.read()
+            )
+            pdf_buffer.seek(0)  # Rewind for potential reuse
+            
+            mail.send(msg)
+            print(f"Quote email sent to {client_email}")
+            return True
+            
+    except Exception as e:
+        print(f"Failed to send quote email: {e}")
         import traceback
         traceback.print_exc()
         return False
