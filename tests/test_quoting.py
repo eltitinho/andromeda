@@ -1,7 +1,7 @@
 import pytest
 from flask import Flask
 from flask_login import LoginManager
-from app.blueprints.invoicing import invoicing_bp
+from app.blueprints.quoting import quoting_bp
 from app.blueprints.auth import public_bp
 from app.models import User
 from unittest.mock import patch, MagicMock
@@ -21,7 +21,7 @@ def app():
         return User(id=1, username='admin', is_admin=True) if user_id == 1 else None
 
     app.register_blueprint(public_bp)
-    app.register_blueprint(invoicing_bp, url_prefix='/invoicing')
+    app.register_blueprint(quoting_bp, url_prefix='/quoting')
 
     return app
 
@@ -29,13 +29,13 @@ def app():
 def client(app):
     return app.test_client()
 
-def test_invoicing_unauthenticated(client):
+def test_quoting_unauthenticated(client):
     # Test that unauthenticated users are redirected to login
-    response = client.get('/invoicing/', follow_redirects=True)
+    response = client.get('/quoting/', follow_redirects=True)
     assert response.status_code == 200
     assert b'Login' in response.data or b'login' in response.data
 
-def test_invoicing_get_authenticated(client):
+def test_quoting_get_authenticated(client):
     # Login first by posting to login endpoint
     with patch('app.models.User.check_password', return_value=True):
         client.post('/login', data={
@@ -44,12 +44,12 @@ def test_invoicing_get_authenticated(client):
         }, follow_redirects=True)
     
     # Test authenticated GET request
-    response = client.get('/invoicing/')
+    response = client.get('/quoting/')
     assert response.status_code == 200
     assert b'Cotizaci\xc3\xb3n' in response.data or b'Cotizacion' in response.data
 
-@patch('app.invoicing.generate_pdf')
-def test_invoicing_post_authenticated(mock_generate_pdf, client):
+@patch('app.quoting.generate_pdf')
+def test_quoting_post_authenticated(mock_generate_pdf, client):
     # Setup mock
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -63,7 +63,7 @@ def test_invoicing_post_authenticated(mock_generate_pdf, client):
         }, follow_redirects=True)
     
     # Test authenticated POST request
-    response = client.post('/invoicing/', data={
+    response = client.post('/quoting/', data={
         'empresa': 'Test Company',
         'cliente': 'Test Client',
         'email': 'test@example.com',
