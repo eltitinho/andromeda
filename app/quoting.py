@@ -1,4 +1,4 @@
-from flask import request, render_template, send_file, session, current_app
+from flask import request, render_template, send_file, session, current_app, flash
 from flask_mail import Message
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
@@ -181,15 +181,46 @@ def generate_pdf(request):
     if send_email and client_email:
         # Send email with PDF attachment to client
         output_buffer.seek(0)  # Rewind buffer for email attachment
-        if send_quote_email(client_email, output_buffer, request.form):
+        success, error_msg = send_quote_email(client_email, output_buffer, request.form)
+        if success:
             print(f"Quote email sent successfully to {client_email}")
+            flash(f'Email enviado a {client_email}!', 'success')
             output_buffer.seek(0)  # Rewind again for download
         else:
-            print(f"Failed to send quote email to {client_email}")
+            print(f"Failed to send quote email to {client_email}: {error_msg}")
+            flash(f'Error al enviar email a {client_email}: {error_msg}', 'error')
             output_buffer.seek(0)  # Rewind for download
+    else:
+        # Email not sent - either checkbox not checked or no client email
+        if send_email:
+            flash('Email no enviado: Favor de poner un correo electronico de destino.', 'warning')
+        else:
+            flash('Email no enviado: Envio de mail no seleccionado.', 'warning')
         # Continue with PDF download even if email fails
     
-    return send_file(output_buffer, as_attachment=True, download_name='cotizacion.pdf', mimetype='application/pdf')
+    # Store PDF in temp file and redirect to result page
+    import tempfile
+    import uuid
+    from flask import session, redirect, url_for
+    
+    # Create temp directory if it doesn't exist
+    temp_dir = os.path.join(os.path.dirname(__file__), '../temp_pdfs')
+    os.makedirs(temp_dir, exist_ok=True)
+    
+    # Generate unique filename
+    pdf_filename = f"cotizacion_{uuid.uuid4().hex}.pdf"
+    pdf_path = os.path.join(temp_dir, pdf_filename)
+    
+    # Save PDF to temp file
+    output_buffer.seek(0)
+    with open(pdf_path, 'wb') as f:
+        f.write(output_buffer.read())
+    
+    # Store filename in session for the result page
+    session['pdf_filename'] = pdf_filename
+    
+    # Redirect to result page
+    return redirect(url_for('quoting.quoting_result'))
     
 def get_email_credentials():
     """Retrieve email credentials and SMTP settings from user database"""
@@ -222,24 +253,37 @@ def get_email_credentials():
         conn.close()
         
         if result:
-            # Decrypt the password for use with SMTP
-            email_password = decrypt_data(result['email_password_encrypted'])
-            print(f"Found email credentials in database: {result['email_address']}")
-            print(f"SMTP Server: {result['smtp_server']}:{result['smtp_port']}")
-            return {
-                'email_address': result['email_address'],
-                'email_password': email_password,
-                'smtp_server': result['smtp_server'],
-                'smtp_port': result['smtp_port'],
-                'smtp_use_tls': bool(result['smtp_use_tls']),
-                'smtp_use_ssl': bool(result['smtp_use_ssl'])
-            }
+            try:
+                # Decrypt the password for use with SMTP
+                email_password = decrypt_data(result['email_password_encrypted'])
+                if email_password is None:
+                    error_msg = "Failed to decrypt email password. The encryption key may have changed. Please re-enter your email credentials."
+                    print(error_msg)
+                    flash(error_msg, 'error')
+                    return None
+                print(f"Found email credentials in database: {result['email_address']}")
+                print(f"SMTP Server: {result['smtp_server']}:{result['smtp_port']}")
+                return {
+                    'email_address': result['email_address'],
+                    'email_password': email_password,
+                    'smtp_server': result['smtp_server'],
+                    'smtp_port': result['smtp_port'],
+                    'smtp_use_tls': bool(result['smtp_use_tls']),
+                    'smtp_use_ssl': bool(result['smtp_use_ssl'])
+                }
+            except Exception as e:
+                error_msg = f"Failed to decrypt email password: {str(e)}. The encryption key may have changed. Please re-enter your email credentials."
+                print(error_msg)
+                flash(error_msg, 'error')
+                return None
         else:
             print("No email credentials found in database (table exists but empty)")
+            return None
             
-        return result if result else None
     except Exception as e:
-        print(f"Error retrieving email credentials: {e}")
+        error_msg = f"Error retrieving email credentials: {str(e)}"
+        print(error_msg)
+        flash(error_msg, 'error')
         return None
 
 def update_mail_config():
@@ -308,26 +352,33 @@ def send_email_with_current_config():
 
 
 def send_quote_email(client_email, pdf_buffer, form_data):
-    """Send quote email with PDF attachment to client"""
+    """Send quote email with PDF attachment to client
+    
+    Returns:
+        tuple: (success: bool, error_message: str or None)
+    """
     from flask import current_app
     from flask_mail import Message
     
     # Ensure Mail is properly initialized with current credentials
     if not update_mail_config():
-        print("Cannot send email - no valid credentials")
-        return False
+        error_msg = "Cannot send email - no valid credentials found in database. Please configure your email settings first."
+        print(error_msg)
+        return False, error_msg
     
     try:
         # Get the Mail instance
         mail = current_app.extensions.get('mail')
         if not mail:
-            print("Flask-Mail not initialized")
-            return False
+            error_msg = "Flask-Mail extension not initialized. Email cannot be sent."
+            print(error_msg)
+            return False, error_msg
         
         credentials = get_email_credentials()
         if not credentials:
-            print("No email credentials found")
-            return False
+            error_msg = "No email credentials found. Please configure your email settings."
+            print(error_msg)
+            return False, error_msg
         
         # Get client name from form data
         cliente = form_data.get('cliente', 'Cliente')
@@ -344,10 +395,9 @@ def send_quote_email(client_email, pdf_buffer, form_data):
 
 Adjunto encontrará la cotización solicitada.
 
-Por favor revise el documento y, si todo está correcto, responda a este correo para confirmar su aceptación.
+Por favor revise el documento y, si todo está correcto, responda a este correo para confirmar.
 
-Gracias,
-Andromeda"""
+Gracias"""
             
             # Attach PDF
             pdf_buffer.seek(0)
@@ -359,11 +409,12 @@ Andromeda"""
             pdf_buffer.seek(0)  # Rewind for potential reuse
             
             mail.send(msg)
-            print(f"Quote email sent to {client_email}")
-            return True
+            print(f"Quote email sent successfully to {client_email}")
+            return True, None
             
     except Exception as e:
-        print(f"Failed to send quote email: {e}")
+        error_msg = f"Failed to send quote email to {client_email}: {str(e)}"
+        print(error_msg)
         import traceback
         traceback.print_exc()
-        return False
+        return False, error_msg

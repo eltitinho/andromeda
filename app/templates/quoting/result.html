@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quote Result</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <h1>Cotizacion Generada</h1>
+    
+    <div class="result-container">
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flash-messages">
+              {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+        
+        {% if pdf_filename %}
+            <div class="download-section">
+                <a href="{{ url_for('quoting.download_pdf', pdf_filename=pdf_filename) }}" 
+                   class="download-button">
+                    Download cotizacion.pdf
+                </a>
+            </div>
+        {% endif %}
+        
+        <div class="actions">
+            <a href="{{ url_for('quoting.quoting_home') }}" class="back-button">
+                Nueva cotización
+            </a>
+        </div>
+    </div>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-image: url('/static/images/background.jpeg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .result-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            color: black;
+            text-align: center;
+        }
+        
+        .download-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .download-button {
+            display: inline-block;
+            padding: 15px 30px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .download-button:hover {
+            background: #0056b3;
+        }
+        .back-button {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #6c757d;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .back-button:hover {
+            background: #5a6268;
+        }
+        .actions {
+            margin-top: 30px;
+            text-align: center;
+        }
+        .flash-messages {
+            margin: 20px 0;
+        }
+        /* Flash message alerts - centered in result container */
+        .result-container .alert {
+            padding: 15px 20px;
+            margin: 0 auto 10px auto;
+            border-radius: 4px;
+            width: fit-content;
+            max-width: 95%;
+            text-align: center;
+            font-weight: bold;
+            color: white;
+            display: block;
+        }
+        
+        .alert-error {
+            background-color: #ff6b6b;
+            border: 1px solid #ff4757;
+        }
+        
+        .alert-success {
+            background-color: #51cf66;
+            border: 1px solid #379237;
+        }
+        
+        .alert-warning {
+            background-color: #ffd43b;
+            color: #333;
+            border: 1px solid #ffc93c;
+        }
+    </style>
+</body>
+</html>

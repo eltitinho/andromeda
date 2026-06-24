@@ -77,3 +77,32 @@ input[type="submit"] {
 input[type="submit"]:hover {
     background-color: #4a48c7;
 }
+
+/* Flash message alerts */
+.alert {
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 4px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.alert-error {
+    background-color: #ff6b6b;
+    color: white;
+    border: 1px solid #ff4757;
+}
+
+.alert-success {
+    background-color: #51cf66;
+    color: white;
+    border: 1px solid #379237;
+}
+
+.alert-warning {
+    background-color: #ffd43b;
+    color: #333;
+    border: 1px solid #ffc93c;
+}
