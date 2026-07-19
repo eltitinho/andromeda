@@ -19,16 +19,17 @@ def quoting_home():
 
 @quoting_bp.route('/result')
 def quoting_result():
-    # Get the PDF filename from session
+    # Get the PDF filename and tracking number from session
     pdf_filename = session.pop('pdf_filename', None)
+    tracking_number = session.pop('tracking_number', None)
     
     if not pdf_filename:
         flash('No PDF file found. Please generate a quote first.', 'error')
         return redirect(url_for('quoting.quoting_home'))
     
     # The flash messages are already in the session from generate_pdf
-    # Render the result page with download link
-    return render_template('quoting/result.html', pdf_filename=pdf_filename)
+    # Render the result page with download link and tracking info
+    return render_template('quoting/result.html', pdf_filename=pdf_filename, tracking_number=tracking_number)
 
 @quoting_bp.route('/download/<pdf_filename>')
 def download_pdf(pdf_filename):

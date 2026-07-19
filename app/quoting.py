@@ -9,6 +9,7 @@ from PIL import Image
 from datetime import datetime
 import os
 import sqlite3
+import uuid
 
 # Utility functions
 def draw_long_string(c: canvas.Canvas, start_x: int, start_y: int, s: str, max_width: int):
@@ -64,6 +65,20 @@ def strings_to_column(c: canvas.Canvas, l: list, columns: list, y: int, font: st
     c.setFont(font, size)
     for i, e in enumerate(l):
         c.drawString(columns[i], y, e)
+
+# Tracking number generation function
+def generate_and_store_tracking_number():
+    """Generate a unique tracking number and store it in tracking.db with status 0 (created)"""
+    tracking_number = f"TRACK{uuid.uuid4().hex[:8].upper()}"
+    
+    conn = sqlite3.connect('tracking.db')
+    cursor = conn.cursor()
+    cursor.execute('INSERT INTO tracking (tracking_number, status) VALUES (?, ?)', 
+                   (tracking_number, 0))
+    conn.commit()
+    conn.close()
+    
+    return tracking_number
 
 # PDF generation function
 def generate_pdf(request):
@@ -178,10 +193,13 @@ def generate_pdf(request):
     send_email = request.form.get('send_email')
     client_email = request.form.get('email')
     
+    # Generate tracking number for this quote
+    tracking_number = generate_and_store_tracking_number()
+    
     if send_email and client_email:
         # Send email with PDF attachment to client
         output_buffer.seek(0)  # Rewind buffer for email attachment
-        success, error_msg = send_quote_email(client_email, output_buffer, request.form)
+        success, error_msg = send_quote_email(client_email, output_buffer, request.form, tracking_number)
         if success:
             print(f"Quote email sent successfully to {client_email}")
             flash(f'Email enviado a {client_email}!', 'success')
@@ -216,8 +234,9 @@ def generate_pdf(request):
     with open(pdf_path, 'wb') as f:
         f.write(output_buffer.read())
     
-    # Store filename in session for the result page
+    # Store filename and tracking number in session for the result page
     session['pdf_filename'] = pdf_filename
+    session['tracking_number'] = tracking_number
     
     # Redirect to result page
     return redirect(url_for('quoting.quoting_result'))
@@ -351,8 +370,14 @@ def send_email_with_current_config():
         return False
 
 
-def send_quote_email(client_email, pdf_buffer, form_data):
+def send_quote_email(client_email, pdf_buffer, form_data, tracking_number=None):
     """Send quote email with PDF attachment to client
+    
+    Args:
+        client_email: Recipient email address
+        pdf_buffer: PDF file buffer to attach
+        form_data: Form data containing client information
+        tracking_number: Optional tracking number to include in email
     
     Returns:
         tuple: (success: bool, error_message: str or None)
@@ -383,6 +408,11 @@ def send_quote_email(client_email, pdf_buffer, form_data):
         # Get client name from form data
         cliente = form_data.get('cliente', 'Cliente')
         
+        # Build tracking URL if tracking number is provided
+        tracking_url = None
+        if tracking_number:
+            tracking_url = f"http://68.183.137.189/public_tracking/view?tracking_number={tracking_number}"
+        
         with current_app.app_context():
             msg = Message(
                 subject="Cotización adjunta",
@@ -391,7 +421,19 @@ def send_quote_email(client_email, pdf_buffer, form_data):
             )
             
             # Spanish email body
-            msg.body = f"""Estimado/a {cliente},
+            if tracking_url:
+                msg.body = f"""Estimado/a {cliente},
+
+Adjunto encontrará la cotización solicitada.
+
+Puede rastrear el estado de su cotización usando el siguiente enlace:
+{tracking_url}
+
+Por favor revise el documento y, si todo está correcto, responda a este correo para confirmar.
+
+Gracias"""
+            else:
+                msg.body = f"""Estimado/a {cliente},
 
 Adjunto encontrará la cotización solicitada.
 

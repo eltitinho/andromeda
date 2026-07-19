@@ -30,6 +30,18 @@
             </div>
         {% endif %}
         
+        {% if tracking_number %}
+            <div class="tracking-section">
+                <p class="tracking-label">Numero de rastreo:</p>
+                <p class="tracking-number">{{ tracking_number }}</p>
+                <a href="http://68.183.137.189/public_tracking/view?tracking_number={{ tracking_number }}" 
+                   class="tracking-link"
+                   target="_blank">
+                    Ver estado de cotizacion
+                </a>
+            </div>
+        {% endif %}
+        
         <div class="actions">
             <a href="{{ url_for('quoting.quoting_home') }}" class="back-button">
                 Nueva cotización
@@ -128,6 +140,41 @@
             background-color: #ffd43b;
             color: #333;
             border: 1px solid #ffc93c;
+        }
+        
+        .tracking-section {
+            margin: 30px auto;
+            padding: 20px;
+            background: #e7f3ff;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #007bff;
+        }
+        .tracking-label {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .tracking-number {
+            font-size: 20px;
+            font-weight: bold;
+            color: #007bff;
+            margin: 10px 0;
+            letter-spacing: 2px;
+        }
+        .tracking-link {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        .tracking-link:hover {
+            background: #218838;
         }
     </style>
 </body>
