@@ -2,6 +2,7 @@ from flask import redirect, url_for, render_template, request, Blueprint, flash
 from flask_login import login_user, logout_user, current_user
 from app.models import User
 from app.utils.encryption import encrypt_data, decrypt_data
+from app.utils.smtp import get_smtp_settings
 import sqlite3
 import gc
 import json
@@ -68,10 +69,18 @@ def email_settings():
         email_password = request.form['email_password']
         
         # Get SMTP settings from form (with smart defaults)
-        smtp_server = request.form.get('smtp_server', f'smtp.{email_address.split("@")[-1]}')
-        smtp_port = int(request.form.get('smtp_port', 587))
-        smtp_use_tls = request.form.get('smtp_use_tls', 'on') == 'on'
-        smtp_use_ssl = request.form.get('smtp_use_ssl', 'off') == 'on'
+        if 'smtp_server' in request.form:
+            smtp_server = request.form['smtp_server']
+            smtp_port = int(request.form.get('smtp_port', 587))
+            smtp_use_tls = request.form.get('smtp_use_tls', 'on') == 'on'
+            smtp_use_ssl = request.form.get('smtp_use_ssl', 'off') == 'on'
+        else:
+            # Use smart defaults based on email domain
+            smtp_config = get_smtp_settings(email_address)
+            smtp_server = smtp_config['smtp_server']
+            smtp_port = smtp_config['smtp_port']
+            smtp_use_tls = smtp_config['smtp_use_tls']
+            smtp_use_ssl = smtp_config['smtp_use_ssl']
         
         # Encrypt the email password (we need the original for SMTP authentication)
         email_password_encrypted = encrypt_data(email_password)

@@ -6,6 +6,7 @@ Flask-Login==0.6.3
 Flask-Mail==0.9.1
 keyring==23.5.0
 cryptography==38.0.4
+dnspython==2.6.1
 secretstorage==3.3.1
 Flask-SQLAlchemy==3.1.1
 greenlet==3.2.4
