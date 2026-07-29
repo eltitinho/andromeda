@@ -4,10 +4,8 @@ click==8.3.1
 Flask==3.1.2
 Flask-Login==0.6.3
 Flask-Mail==0.9.1
-keyring==23.5.0
-cryptography==38.0.4
-dnspython==2.6.1
-secretstorage==3.3.1
+python-dotenv==1.0.0
+requests==2.31.0
 Flask-SQLAlchemy==3.1.1
 greenlet==3.2.4
 gunicorn==23.0.0

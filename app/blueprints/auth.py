@@ -1,11 +1,6 @@
 from flask import redirect, url_for, render_template, request, Blueprint, flash
 from flask_login import login_user, logout_user, current_user
 from app.models import User
-from app.utils.encryption import encrypt_data, decrypt_data
-from app.utils.smtp import get_smtp_settings
-import sqlite3
-import gc
-import json
 from flask import current_app
 
 public_bp = Blueprint('public', __name__)
@@ -50,82 +45,3 @@ def before_private_request():
 @private_bp.route('/dashboard')
 def dashboard():
     return render_template('auth/dashboard.html')  # Updated path
-
-@private_bp.route('/configuration')
-def configuration():
-    return render_template('auth/configuration.html')
-
-def get_user_db_connection():
-    """Get connection to user settings database"""
-    conn = sqlite3.connect('user.db')
-    conn.row_factory = sqlite3.Row
-    return conn
-
-@private_bp.route('/email_settings', methods=['GET', 'POST'])
-def email_settings():
-    
-    if request.method == 'POST':
-        email_address = request.form['email_address']
-        email_password = request.form['email_password']
-        
-        # Get SMTP settings from form (with smart defaults)
-        if 'smtp_server' in request.form:
-            smtp_server = request.form['smtp_server']
-            smtp_port = int(request.form.get('smtp_port', 587))
-            smtp_use_tls = request.form.get('smtp_use_tls', 'on') == 'on'
-            smtp_use_ssl = request.form.get('smtp_use_ssl', 'off') == 'on'
-        else:
-            # Use smart defaults based on email domain
-            smtp_config = get_smtp_settings(email_address)
-            smtp_server = smtp_config['smtp_server']
-            smtp_port = smtp_config['smtp_port']
-            smtp_use_tls = smtp_config['smtp_use_tls']
-            smtp_use_ssl = smtp_config['smtp_use_ssl']
-        
-        # Encrypt the email password (we need the original for SMTP authentication)
-        email_password_encrypted = encrypt_data(email_password)
-        
-        # Clear the password from memory by overwriting it
-        email_password = '*' * len(email_password)
-        
-        # Force garbage collection to clear memory
-        gc.collect()
-        
-        # Store in database
-        conn = get_user_db_connection()
-        cursor = conn.cursor()
-        
-        # Create table if it doesn't exist
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS email_settings (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                email_address TEXT NOT NULL,
-                email_password_encrypted TEXT NOT NULL,
-                smtp_server TEXT NOT NULL,
-                smtp_port INTEGER NOT NULL,
-                smtp_use_tls BOOLEAN NOT NULL,
-                smtp_use_ssl BOOLEAN NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        
-        # Clear any existing settings and add new ones
-        cursor.execute('DELETE FROM email_settings')
-        cursor.execute('''
-            INSERT INTO email_settings 
-            (email_address, email_password_encrypted, smtp_server, smtp_port, smtp_use_tls, smtp_use_ssl)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (email_address, email_password_encrypted, smtp_server, smtp_port, smtp_use_tls, smtp_use_ssl))
-        
-        conn.commit()
-        conn.close()
-        
-        if hasattr(current_app, 'init_mail'):
-            mail_instance = current_app.init_mail()
-            print(f"Flask-Mail reinitialized with new credentials: {mail_instance}")
-        
-        print(f"Email settings saved successfully: {email_address}")
-        return render_template('auth/email_settings.html', success=True)
-    
-    # For GET request, show empty form for now
-    return render_template('auth/email_settings.html')

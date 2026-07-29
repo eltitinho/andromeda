@@ -180,43 +180,31 @@ def test_send_quote_email_with_valid_credentials():
     pdf_buffer = io.BytesIO(b'%PDF-1.4 test pdf content')
     form_data = {'cliente': 'Test Client'}
     
-    # Mock the credential retrieval at the module level
-    with patch('app.quoting.get_email_credentials') as mock_creds, \
-         patch('app.quoting.update_mail_config') as mock_update:
-        
-        # Setup mocks
-        mock_creds.return_value = {
-            'email_address': 'test@test.com',
-            'email_password': 'test_password',
-            'smtp_server': 'smtp.test.com',
-            'smtp_port': 587,
-            'smtp_use_tls': True,
-            'smtp_use_ssl': False
-        }
-        mock_update.return_value = True
-        
-        with app.app_context():
-            result = send_quote_email('client@test.com', pdf_buffer, form_data)
-        
-        # Verify the function returned (True, None)
-        assert result == (True, None)
-        
-        # Verify mail.send was called
-        assert mock_mail.send.called
-        
-        # Verify the message was created with correct parameters
-        call_args = mock_mail.send.call_args
-        msg = call_args[0][0]  # First positional argument
-        
-        assert msg.subject == "Cotización adjunta"
-        assert msg.sender == "test@test.com"
-        assert msg.recipients == ['client@test.com']
-        assert 'Test Client' in msg.body
-        assert 'cotización solicitada' in msg.body
+    # Configure app with MAIL_USERNAME
+    app.config['MAIL_USERNAME'] = 'test@test.com'
+    
+    with app.app_context():
+        result = send_quote_email('client@test.com', pdf_buffer, form_data)
+    
+    # Verify the function returned (True, None)
+    assert result == (True, None)
+    
+    # Verify mail.send was called
+    assert mock_mail.send.called
+    
+    # Verify the message was created with correct parameters
+    call_args = mock_mail.send.call_args
+    msg = call_args[0][0]  # First positional argument
+    
+    assert msg.subject == "Cotización adjunta"
+    assert msg.sender == "test@test.com"
+    assert msg.recipients == ['client@test.com']
+    assert 'Test Client' in msg.body
+    assert 'cotización solicitada' in msg.body
 
 
-def test_send_quote_email_missing_credentials():
-    """Test send_quote_email when no credentials are found"""
+def test_send_quote_email_missing_username():
+    """Test send_quote_email when MAIL_USERNAME is not configured"""
     from app.quoting import send_quote_email
     from flask import Flask
     from flask_mail import Mail
@@ -225,28 +213,23 @@ def test_send_quote_email_missing_credentials():
     app = Flask(__name__)
     app.secret_key = 'test_secret'
     app.config['MAIL_SERVER'] = 'smtp.test.com'
+    # Note: MAIL_USERNAME is not set
     
     # Initialize Mail
     mail = Mail(app)
     mock_mail = MagicMock()
     app.extensions['mail'] = mock_mail
     
-    with patch('app.quoting.get_email_credentials') as mock_creds, \
-         patch('app.quoting.update_mail_config') as mock_update:
-        
-        mock_creds.return_value = None
-        mock_update.return_value = False
-        
-        pdf_buffer = io.BytesIO(b'test pdf')
-        form_data = {'cliente': 'Test Client'}
-        
-        with app.app_context():
-            result = send_quote_email('client@test.com', pdf_buffer, form_data)
-        
-        # Now returns (False, error_message)
-        assert result[0] == False
-        assert result[1] is not None
-        assert "no valid credentials" in result[1]
+    pdf_buffer = io.BytesIO(b'test pdf')
+    form_data = {'cliente': 'Test Client'}
+    
+    with app.app_context():
+        result = send_quote_email('client@test.com', pdf_buffer, form_data)
+    
+    # Now returns (False, error_message)
+    assert result[0] == False
+    assert result[1] is not None
+    assert "MAIL_USERNAME not configured" in result[1]
 
 
 def test_send_quote_email_no_mail_extension():
@@ -257,31 +240,19 @@ def test_send_quote_email_no_mail_extension():
     
     app = Flask(__name__)
     app.secret_key = 'test_secret'
+    app.config['MAIL_USERNAME'] = 'test@test.com'
     # Don't initialize Mail - extensions dict won't have 'mail'
     
-    with patch('app.quoting.get_email_credentials') as mock_creds, \
-         patch('app.quoting.update_mail_config') as mock_update:
-        
-        mock_creds.return_value = {
-            'email_address': 'test@test.com',
-            'email_password': 'test_password',
-            'smtp_server': 'smtp.test.com',
-            'smtp_port': 587,
-            'smtp_use_tls': True,
-            'smtp_use_ssl': False
-        }
-        mock_update.return_value = True
-        
-        pdf_buffer = io.BytesIO(b'test pdf')
-        form_data = {'cliente': 'Test Client'}
-        
-        with app.app_context():
-            result = send_quote_email('client@test.com', pdf_buffer, form_data)
-        
-        # Now returns (False, error_message)
-        assert result[0] == False
-        assert result[1] is not None
-        assert "Flask-Mail" in result[1]
+    pdf_buffer = io.BytesIO(b'test pdf')
+    form_data = {'cliente': 'Test Client'}
+    
+    with app.app_context():
+        result = send_quote_email('client@test.com', pdf_buffer, form_data)
+    
+    # Now returns (False, error_message)
+    assert result[0] == False
+    assert result[1] is not None
+    assert "Flask-Mail" in result[1]
 
 
 def test_send_quote_email_with_pdf_attachment():
@@ -311,36 +282,25 @@ def test_send_quote_email_with_pdf_attachment():
     pdf_buffer = io.BytesIO(pdf_content)
     form_data = {'cliente': 'Test Client'}
     
-    with patch('app.quoting.get_email_credentials') as mock_creds, \
-         patch('app.quoting.update_mail_config') as mock_update:
-        
-        mock_creds.return_value = {
-            'email_address': 'test@test.com',
-            'email_password': 'test_password',
-            'smtp_server': 'smtp.test.com',
-            'smtp_port': 587,
-            'smtp_use_tls': True,
-            'smtp_use_ssl': False
-        }
-        mock_update.return_value = True
-        
-        with app.app_context():
-            result = send_quote_email('client@test.com', pdf_buffer, form_data)
-        
-        # Now returns (True, None) on success
-        assert result == (True, None)
-        
-        # Verify mail.send was called
-        assert mock_mail.send.called
-        
-        # Get the message that was sent
-        call_args = mock_mail.send.call_args
-        msg = call_args[0][0]
-        
-        # Verify PDF attachment
-        assert len(msg.attachments) > 0
-        assert msg.attachments[0].filename == 'cotizacion.pdf'
-        assert msg.attachments[0].content_type == 'application/pdf'
+    app.config['MAIL_USERNAME'] = 'test@test.com'
+    
+    with app.app_context():
+        result = send_quote_email('client@test.com', pdf_buffer, form_data)
+    
+    # Now returns (True, None) on success
+    assert result == (True, None)
+    
+    # Verify mail.send was called
+    assert mock_mail.send.called
+    
+    # Get the message that was sent
+    call_args = mock_mail.send.call_args
+    msg = call_args[0][0]
+    
+    # Verify PDF attachment
+    assert len(msg.attachments) > 0
+    assert msg.attachments[0].filename == 'cotizacion.pdf'
+    assert msg.attachments[0].content_type == 'application/pdf'
 
 
 @patch('app.quoting.send_quote_email')

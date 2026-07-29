@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mailgun Configuration - Andromeda</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+        .config-container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 80%;
+            max-width: 600px;
+        }
+        .config-container h1 {
+            margin-bottom: 20px;
+            text-align: center;
+            color: #333;
+        }
+        .config-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .input-group {
+            display: flex;
+        }
+        .input-group input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px 0 0 4px;
+            box-sizing: border-box;
+        }
+        .input-suffix {
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            border-left: none;
+            padding: 10px;
+            border-radius: 0 4px 4px 0;
+            color: #666;
+        }
+        button[type="submit"] {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+        .help {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .notice {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px 15px;
+            margin-top: 15px;
+            border-radius: 4px;
+        }
+        .notice h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+        .notice code {
+            background-color: #ffc107;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="config-container">
+        <h1>Mailgun Configuration</h1>
+
+        <div class="config-section">
+            <form method="POST" action="">
+                <div class="form-group">
+                    <label for="subdomain">Mailgun Subdomain:</label>
+                    <div class="input-group">
+                        <input type="text" id="subdomain" name="subdomain"
+                               value="{{ subdomain }}" required
+                               placeholder="noreply">
+                        <span class="input-suffix">@bforwarder.mbarque.space</span>
+                    </div>
+                    <p class="help">
+                        Your full Mailgun domain will be: <strong>{{ subdomain }}@bforwarder.mbarque.space</strong>
+                    </p>
+                </div>
+
+                <button type="submit">Save Configuration</button>
+            </form>
+        </div>
+
+        <div style="margin-top: 20px; text-align: center;">
+            <a href="/" style="color: #666; text-decoration: none;">Back to Home</a>
+        </div>
+    </div>
+</body>
+</html>

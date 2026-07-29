@@ -3,6 +3,7 @@ from flask import Blueprint
 from .auth import public_bp, private_bp
 from .quoting import quoting_bp
 from .tracking import public_tracking_bp, tracking_bp
+from .config import config_bp
 
 def init_app(app):
     app.register_blueprint(public_bp)
@@ -10,3 +11,4 @@ def init_app(app):
     app.register_blueprint(quoting_bp, url_prefix='/quoting')
     app.register_blueprint(public_tracking_bp, url_prefix='/public_tracking')
     app.register_blueprint(tracking_bp, url_prefix='/tracking')
+    app.register_blueprint(config_bp, url_prefix='/private')

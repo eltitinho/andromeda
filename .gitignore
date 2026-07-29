@@ -5,3 +5,14 @@ __pycache__/
 tracking.db
 .ai_private/
 temp_pdfs/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Database files
+app.db
+
+# Configuration files
+app_config.json

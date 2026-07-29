@@ -3,7 +3,6 @@ from flask_mail import Message
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from PyPDF2 import PdfWriter, PdfReader
-from app.utils.encryption import decrypt_data
 import io
 from PIL import Image
 from datetime import datetime
@@ -241,137 +240,11 @@ def generate_pdf(request):
     # Redirect to result page
     return redirect(url_for('quoting.quoting_result'))
     
-def get_email_credentials():
-    """Retrieve email credentials and SMTP settings from user database"""
-    try:
-        conn = sqlite3.connect('user.db')
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        # Create table if it doesn't exist
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS email_settings (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                email_address TEXT NOT NULL,
-                email_password_encrypted TEXT NOT NULL,
-                smtp_server TEXT NOT NULL,
-                smtp_port INTEGER NOT NULL,
-                smtp_use_tls BOOLEAN NOT NULL,
-                smtp_use_ssl BOOLEAN NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        print("Email settings table ensured to exist")
-        
-        cursor.execute('''
-            SELECT email_address, email_password_encrypted, 
-                   smtp_server, smtp_port, smtp_use_tls, smtp_use_ssl
-            FROM email_settings ORDER BY id DESC LIMIT 1
-        ''')
-        result = cursor.fetchone()
-        conn.close()
-        
-        if result:
-            try:
-                # Decrypt the password for use with SMTP
-                email_password = decrypt_data(result['email_password_encrypted'])
-                if email_password is None:
-                    error_msg = "Failed to decrypt email password. The encryption key may have changed. Please re-enter your email credentials."
-                    print(error_msg)
-                    flash(error_msg, 'error')
-                    return None
-                print(f"Found email credentials in database: {result['email_address']}")
-                print(f"SMTP Server: {result['smtp_server']}:{result['smtp_port']}")
-                return {
-                    'email_address': result['email_address'],
-                    'email_password': email_password,
-                    'smtp_server': result['smtp_server'],
-                    'smtp_port': result['smtp_port'],
-                    'smtp_use_tls': bool(result['smtp_use_tls']),
-                    'smtp_use_ssl': bool(result['smtp_use_ssl'])
-                }
-            except Exception as e:
-                error_msg = f"Failed to decrypt email password: {str(e)}. The encryption key may have changed. Please re-enter your email credentials."
-                print(error_msg)
-                flash(error_msg, 'error')
-                return None
-        else:
-            print("No email credentials found in database (table exists but empty)")
-            return None
-            
-    except Exception as e:
-        error_msg = f"Error retrieving email credentials: {str(e)}"
-        print(error_msg)
-        flash(error_msg, 'error')
-        return None
-
-def update_mail_config():
-    """Update Flask-Mail configuration with database credentials"""
-    from flask import current_app
-    
-    credentials = get_email_credentials()
-    if not credentials:
-        print("No email credentials found")
-        return False
-
-    # Update Flask config with database credentials
-    current_app.config.update({
-        'MAIL_SERVER': credentials['smtp_server'],
-        'MAIL_PORT': credentials['smtp_port'],
-        'MAIL_USE_TLS': credentials['smtp_use_tls'],
-        'MAIL_USE_SSL': credentials['smtp_use_ssl'],
-        'MAIL_USERNAME': credentials['email_address'],
-        'MAIL_PASSWORD': credentials['email_password']
-    })
-
-    # Initialize Mail if not already done
-    if hasattr(current_app, 'init_mail'):
-        mail_instance = current_app.init_mail()
-        print(f"Flask-Mail initialized: {mail_instance}")
-        return True
-    else:
-        print("init_mail function not available")
-        return False
-
-def send_email_with_current_config():
-    """Send email using the current database credentials"""
-    from flask import current_app
-    from flask_mail import Message
-    
-    # Ensure Mail is properly initialized with current credentials
-    if not update_mail_config():
-        print("Cannot send email - no valid credentials")
-        return False
-    
-    try:
-        # Get the Mail instance
-        mail = current_app.extensions.get('mail')
-        if not mail:
-            print("Flask-Mail not initialized")
-            return False
-        
-        credentials = get_email_credentials()
-        if not credentials:
-            return False
-        
-        with current_app.app_context():
-            msg = Message("Test Email from Andromeda",
-                         sender=credentials['email_address'],
-                         recipients=["kris_generic@tuta.com"])
-            msg.body = "This is a test email sent with proper Flask-Mail configuration"
-            mail.send(msg)
-            print("Email sent successfully!")
-            return True
-            
-    except Exception as e:
-        print(f"Failed to send email: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
 
 def send_quote_email(client_email, pdf_buffer, form_data, tracking_number=None):
     """Send quote email with PDF attachment to client
+    
+    Tries Mailgun HTTP API first, falls back to SMTP if Mailgun is not configured.
     
     Args:
         client_email: Recipient email address
@@ -385,44 +258,17 @@ def send_quote_email(client_email, pdf_buffer, form_data, tracking_number=None):
     from flask import current_app
     from flask_mail import Message
     
-    # Ensure Mail is properly initialized with current credentials
-    if not update_mail_config():
-        error_msg = "Cannot send email - no valid credentials found in database. Please configure your email settings first."
-        print(error_msg)
-        return False, error_msg
+    # Get client name from form data
+    cliente = form_data.get('cliente', 'Cliente')
     
-    try:
-        # Get the Mail instance
-        mail = current_app.extensions.get('mail')
-        if not mail:
-            error_msg = "Flask-Mail extension not initialized. Email cannot be sent."
-            print(error_msg)
-            return False, error_msg
-        
-        credentials = get_email_credentials()
-        if not credentials:
-            error_msg = "No email credentials found. Please configure your email settings."
-            print(error_msg)
-            return False, error_msg
-        
-        # Get client name from form data
-        cliente = form_data.get('cliente', 'Cliente')
-        
-        # Build tracking URL if tracking number is provided
-        tracking_url = None
-        if tracking_number:
-            tracking_url = f"http://68.183.137.189/public_tracking/view?tracking_number={tracking_number}"
-        
-        with current_app.app_context():
-            msg = Message(
-                subject="Cotización adjunta",
-                sender=credentials['email_address'],
-                recipients=[client_email]
-            )
-            
-            # Spanish email body
-            if tracking_url:
-                msg.body = f"""Estimado/a {cliente},
+    # Build tracking URL if tracking number is provided
+    tracking_url = None
+    if tracking_number:
+        tracking_url = f"http://68.183.137.189/public_tracking/view?tracking_number={tracking_number}"
+    
+    # Build Spanish email body
+    if tracking_url:
+        text_body = f"""Estimado/a {cliente},
 
 Adjunto encontrará la cotización solicitada.
 
@@ -432,26 +278,73 @@ Puede rastrear el estado de su cotización usando el siguiente enlace:
 Por favor revise el documento y, si todo está correcto, responda a este correo para confirmar.
 
 Gracias"""
-            else:
-                msg.body = f"""Estimado/a {cliente},
+    else:
+        text_body = f"""Estimado/a {cliente},
 
 Adjunto encontrará la cotización solicitada.
 
 Por favor revise el documento y, si todo está correcto, responda a este correo para confirmar.
 
 Gracias"""
+    
+    # Prepare PDF attachment
+    pdf_buffer.seek(0)
+    pdf_content = pdf_buffer.read()
+    pdf_buffer.seek(0)  # Rewind for potential reuse
+    
+    # Try Mailgun first if API key is configured
+    api_key = current_app.config.get('MAILGUN_API_KEY')
+    if api_key:
+        try:
+            from app.services.mailgun import send_mailgun_email
+            success, error_msg = send_mailgun_email(
+                to=client_email,
+                subject="Cotización adjunta",
+                text=text_body,
+                from_name=cliente,
+                attachments=[('cotizacion.pdf', pdf_content)]
+            )
+            if success:
+                print(f"Quote email sent successfully to {client_email} via Mailgun")
+                return True, None
+            else:
+                print(f"Mailgun send failed: {error_msg}, trying SMTP fallback...")
+        except Exception as e:
+            print(f"Mailgun error: {str(e)}, trying SMTP fallback...")
+    
+    # Fall back to SMTP if Mailgun is not configured or failed
+    try:
+        # Get the Mail instance
+        mail = current_app.extensions.get('mail')
+        if not mail:
+            error_msg = "Flask-Mail extension not initialized. Email cannot be sent."
+            print(error_msg)
+            return False, error_msg
+        
+        # Get sender from config
+        sender = current_app.config.get('MAIL_USERNAME')
+        if not sender:
+            error_msg = "MAIL_USERNAME not configured. Cannot send email."
+            print(error_msg)
+            return False, error_msg
+        
+        with current_app.app_context():
+            msg = Message(
+                subject="Cotización adjunta",
+                sender=sender,
+                recipients=[client_email]
+            )
+            msg.body = text_body
             
             # Attach PDF
-            pdf_buffer.seek(0)
             msg.attach(
                 filename='cotizacion.pdf',
                 content_type='application/pdf',
-                data=pdf_buffer.read()
+                data=pdf_content
             )
-            pdf_buffer.seek(0)  # Rewind for potential reuse
             
             mail.send(msg)
-            print(f"Quote email sent successfully to {client_email}")
+            print(f"Quote email sent successfully to {client_email} via SMTP")
             return True, None
             
     except Exception as e:
