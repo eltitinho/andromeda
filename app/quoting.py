@@ -311,6 +311,8 @@ Gracias"""
                 print(f"Mailgun send failed: {error_msg}, trying SMTP fallback...")
         except Exception as e:
             print(f"Mailgun error: {str(e)}, trying SMTP fallback...")
+    else:
+        print("MAILGUN_API_KEY not configured, trying SMTP fallback...")
     
     # Fall back to SMTP if Mailgun is not configured or failed
     try:
@@ -324,7 +326,7 @@ Gracias"""
         # Get sender from config
         sender = current_app.config.get('MAIL_USERNAME')
         if not sender:
-            error_msg = "MAIL_USERNAME not configured. Cannot send email."
+            error_msg = "Email configuration not found. Please configure either MAILGUN_API_KEY (recommended) or SMTP credentials (MAIL_USERNAME, MAIL_PASSWORD, MAIL_SERVER) in your .env file."
             print(error_msg)
             return False, error_msg
         

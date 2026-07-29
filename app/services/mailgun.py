@@ -57,7 +57,7 @@ def send_mailgun_email(to, subject, text, from_name=None, attachments=None):
     # Get API key from environment
     api_key = current_app.config.get('MAILGUN_API_KEY')
     if not api_key:
-        return False, "MAILGUN_API_KEY environment variable not set"
+        return False, "MAILGUN_API_KEY not configured. Please configure your Mailgun API key in the .env file. You can also use SMTP by configuring MAIL_USERNAME, MAIL_PASSWORD, and MAIL_SERVER."
     
     # Construct API URL
     domain = get_mailgun_domain()

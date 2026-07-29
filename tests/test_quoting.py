@@ -229,7 +229,7 @@ def test_send_quote_email_missing_username():
     # Now returns (False, error_message)
     assert result[0] == False
     assert result[1] is not None
-    assert "MAIL_USERNAME not configured" in result[1]
+    assert "Email configuration not found" in result[1]
 
 
 def test_send_quote_email_no_mail_extension():
