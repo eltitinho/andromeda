@@ -31,7 +31,10 @@ def get_mailgun_domain():
     config = load_config()
     subdomain = config.get('mailgun_subdomain', 'noreply')
     base_domain = current_app.config.get('MAILGUN_BASE_DOMAIN', 'bforwarder.mbarque.space')
-    return f"{subdomain}.{base_domain}"
+    if subdomain:
+        return f"{subdomain}.{base_domain}"
+    else:
+        return base_domain
 
 def get_from_address(name=None):
     """Construct from address for Mailgun"""
@@ -67,7 +70,7 @@ def send_mailgun_email(to, subject, text, from_name=None, attachments=None):
     domain = get_mailgun_domain()
     print(f"[MAILGUN DEBUG] Constructed domain: {domain}")
     
-    api_url = f"https://api.mailgun.net/v3/{domain}/messages"
+    api_url = f"https://api.eu.mailgun.net/v3/{domain}/messages"
     print(f"[MAILGUN DEBUG] API URL: {api_url}")
     
     # Construct from address
